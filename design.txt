@@ -1,0 +1,12 @@
+
+for (nested) models
+    sample (uniformly?) over parameter space
+    transform into model
+    get set of points (in simplex)
+
+calculate distance between models
+    use Hausdorff distance, over sampled points
+
+    what intermediate metric
+        total variation distance
+        euclidean
