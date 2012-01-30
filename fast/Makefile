@@ -1,15 +1,13 @@
-OPTS=-O1 -larmadillo -lgsl -lgslcblas
 
+COPTS=-O2
+LOPTS=
 all: test
 
 test: test.o rbm.o
-	g++ test.o rbm.o -o test -larmadillo -lgsl -lgslcblas
+	g++ -o test test.o rbm.o -larmadillo -lgsl -lgslcblas $(LOPTS)
 
-rbm.o: rbm.cpp
-	g++ -c rbm.cpp -O1
-
-test.o: test.cpp
-	g++ -c test.cpp -O1
+.cpp.o:
+	g++ -c $(COPTS) $<
 
 clean:
-	rm *.o test
+	rm -f *.o test

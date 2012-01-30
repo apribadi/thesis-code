@@ -1,4 +1,4 @@
-#include "rbm_mc.hpp"
+#include "rbm.hpp"
 
 #include <armadillo>
 #include <assert.h>
@@ -6,28 +6,12 @@
 #include <boost/tuple/tuple.hpp>
 #include <gsl/gsl_qrng.h>
 #include <iostream>
+#include <float.h>
+#include <math.h>
 
 using namespace arma;
 using namespace boost;
 using namespace std;
-
-const double PRNG_RANGE = 3;
-
-vec param_to_simplex(int n, int k, mat w, vec b, vec c) {
-    mat v = binary(n);
-    mat h = binary(k).t();
-
-    mat energy = 
-          v * w * h
-        + v * b * ones<mat>(1, 1 << k)
-        + ones<mat>(1 << n, 1) * c.t() * h;
-    mat psi = exp(energy);
-
-    vec uprob = sum(psi, 1);  // Sum (i.e. marginalize) across hidden states.
-    vec prob = uprob / sum(uprob);
-
-    return prob;
-}
 
 /* Ex. for n = 3:   0 0 0
  *                  0 0 1
@@ -54,6 +38,29 @@ mat binary(int n) {
     return ret;
 }
 
+vec param_to_simplex(int n, int k, mat w, vec b, vec c) {
+    mat v = binary(n);
+    mat h = binary(k).t();
+
+    mat energy = 
+          v * w * h
+        + v * b * ones<mat>(1, 1 << k)
+        + ones<mat>(1 << n, 1) * c.t() * h;
+    mat psi = exp(energy);
+
+    vec uprob = sum(psi, 1);
+    vec prob = uprob / sum(uprob);
+
+    return prob;
+}
+
+
+const double PRNG_RANGE = 2;
+
+inline double uniform(double x) {
+    return x * 2 * PRNG_RANGE - PRNG_RANGE;
+}
+
 /* Use quasi-random sequences from GSL */
 vector<vec> sample(int n, int k, int ntrials) {
     // The gsl_qrng_halton algorithm supports sampling from a space of at most
@@ -63,9 +70,16 @@ vector<vec> sample(int n, int k, int ntrials) {
 
     vector<vec> res;
 
+    for (int t=0; t < ntrials; ++t) {
+        mat w = randu<mat>(n, k) * 2 * PRNG_RANGE - PRNG_RANGE;
+        mat b = randu<mat>(n) * 2 * PRNG_RANGE - PRNG_RANGE;
+        mat c = randu<mat>(k) * 2 * PRNG_RANGE - PRNG_RANGE;
+        res.push_back(param_to_simplex(n, k, w, b, c));
+    }
+
+    /*
     gsl_qrng* q = gsl_qrng_alloc(gsl_qrng_halton, nparams);
     double* params = new double[nparams];
-
 
     for (int t=0; t < ntrials; ++t) {
         gsl_qrng_get(q, params);
@@ -74,34 +88,65 @@ vector<vec> sample(int n, int k, int ntrials) {
         mat w(n, k);
         for (int i=0; i < n; ++i)
             for (int j=0; j < k; ++j)
-                w(i, j) = params[pidx++];
+                w(i, j) = uniform(params[pidx++]);
 
 
         vec b(n);
         for (int i=0; i < n; ++i)
-            b(i) = params[pidx++];
+            b(i) = uniform(params[pidx++]);
 
         vec c(k);
         for (int j=0; j < k; ++j)
-            c(j) = params[pidx++];
+            c(j) = uniform(params[pidx++]);
 
         res.push_back(param_to_simplex(n, k, w, b, c));
     }
 
     delete[] params;
     gsl_qrng_free(q);
+    */
 
     return res;
 }
 
-/* Below here are unused things. */
+double total_variation_distance(vec x, vec y) {
+    assert(x.n_elem == y.n_elem);
 
-void test() {
+    double acc = 0;
+    for (int i=0; i < x.n_elem; ++i)
+        acc += abs(x[i] - y[i]);
+
+    return 0.5 * acc;
 }
 
+double hausdorff(vector<vec> xs, vector<vec> ys) {
 
-tuple<mat, vec, vec> rand_param(int n, int k) {
-    mat w = (2 * PRNG_RANGE * randu<mat>(n, k)) + PRNG_RANGE;
-    vec b = (2 * PRNG_RANGE * randu<vec>(n)) + PRNG_RANGE;
-    vec c = (2 * PRNG_RANGE * randu<vec>(k)) + PRNG_RANGE;
+    int n = xs.size();
+    int m = ys.size();
+
+    // maximize
+    double a = DBL_MIN;
+    for (int i=0; i < n; ++i) {
+        // minimize
+        double c = DBL_MAX;
+        for (int j=0; j < m; ++j) {
+            double d = total_variation_distance(xs[i], ys[j]);
+            c = d < c ? d : c;
+        }
+        a = c > a ? c : a;
+    }
+
+    // maximize
+    double b = DBL_MIN;
+    for (int j=0; j < m; ++j) {
+        // minimize
+        double c = DBL_MAX;
+        for (int i=0; i < n; ++i) {
+            double d = total_variation_distance(xs[i], ys[j]);
+            c = d < c ? d : c;
+        }
+        b = c > b ? c : b;
+    }
+
+    return (a < b) ? b : a;
 }

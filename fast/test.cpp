@@ -1,4 +1,4 @@
-#include "rbm_mc.hpp"
+#include "rbm.hpp"
 
 #include <armadillo>
 #include <boost/container/vector.hpp>
@@ -10,16 +10,32 @@ using namespace std;
 int main() {
     cout << "Running ..." << endl;
 
-    int n = 3;
-    int k = 2;
-    int ntrials = 10;
-    vector<vec> ss = sample(n, k, ntrials);
+    int n = 2;
+    int kmax = 3;
+    int ntrials = 1 << 14;
 
-    for (int t=0; t < ntrials; ++t) {
-        cout << "Trial: " << t << endl;
-        ss[t].t().print();
+    vector< vector<vec> > ss;
+    vector< vector<vec> > tt;
+
+    for (int k=0; k <= kmax; ++k) {
+        ss.push_back(sample(n, k, ntrials));
+        tt.push_back(sample(n, k, ntrials));
     }
 
+    for (int k=0; k <= kmax - 1; ++k) {
+        double d = hausdorff(ss[k], ss[k+1]);
+        cout << "Hausdorff distance between k=" << k 
+             << " and k=" << (k+1) 
+             << " is: " << d
+             << endl;
+    }
 
+    for (int k=0; k <= kmax; ++k) {
+        double d = hausdorff(ss[k], tt[k]);
+        cout << "Hausdorff distance between k=" << k 
+             << " and k=" << (k) 
+             << " is: " << d
+             << endl;
+    }
     return 0;
 }
