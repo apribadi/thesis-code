@@ -1,5 +1,5 @@
 
-COPTS=-O2
+COPTS=-O2 -Wall -Wextra
 LOPTS=
 all: test
 

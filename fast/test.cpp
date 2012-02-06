@@ -10,30 +10,19 @@ using namespace std;
 int main() {
     cout << "Running ..." << endl;
 
-    int n = 2;
-    int kmax = 3;
-    int ntrials = 1 << 14;
+    int n = 3;
+    int kmax = 4;
 
     vector< vector<vec> > ss;
-    vector< vector<vec> > tt;
 
     for (int k=0; k <= kmax; ++k) {
-        ss.push_back(sample(n, k, ntrials));
-        tt.push_back(sample(n, k, ntrials));
+        ss.push_back(sample_lattice(n, k));
     }
 
     for (int k=0; k <= kmax - 1; ++k) {
         double d = hausdorff(ss[k], ss[k+1]);
         cout << "Hausdorff distance between k=" << k 
              << " and k=" << (k+1) 
-             << " is: " << d
-             << endl;
-    }
-
-    for (int k=0; k <= kmax; ++k) {
-        double d = hausdorff(ss[k], tt[k]);
-        cout << "Hausdorff distance between k=" << k 
-             << " and k=" << (k) 
              << " is: " << d
              << endl;
     }
